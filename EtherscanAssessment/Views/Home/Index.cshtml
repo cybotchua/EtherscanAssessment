@@ -1,0 +1,362 @@
+﻿<!DOCTYPE html>
+
+<html>
+<head>
+    <script src="https://code.jquery.com/jquery-3.4.1.js"
+            integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU="
+            crossorigin="anonymous"></script>
+
+    <title>Etherscan</title>
+    <style type="text/css">
+        .headerStyle {
+            background-color: lightgrey;
+            padding-left: 5px;
+            padding-top: 5px;
+            padding-bottom: 5px;
+        }
+
+        .saveUpdateTokenContainer {
+            border-style: solid;
+            border-width: 2px;
+            border-color: lightgrey;
+            margin-top: 30px;
+            margin-right: 10px;
+            margin-left: 10px;
+            box-sizing: border-box;
+        }
+
+        .formTitle {
+            margin-top: 15px;
+            margin-left: 15px;
+        }
+
+        .formTable {
+            width: 100%;
+            margin: 10px;
+            box-sizing: border-box;
+        }
+
+        input {
+            width: 98%;
+            box-sizing: border-box;
+            font-size: 15px;
+        }
+
+        label {
+            font-size: 15px;
+        }
+
+        .button {
+            background-color: green;
+            border: none;
+            border-radius: 7px;
+            color: white;
+            padding: 10px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 15px;
+            cursor: pointer;
+            outline: none;
+            margin-top: 10px;
+            margin-right: 10px;
+        }
+
+        .buttonRed {
+            background-color: red;
+        }
+
+        hr {
+            border-top: 1px solid lightgrey;
+            width: 98%;
+        }
+
+        #token_table {
+            width: 98%;
+            margin: 15px;
+        }
+
+            #token_table td, th {
+                border: 1px solid #dddddd;
+                text-align: left;
+                padding: 8px;
+            }
+    </style>
+</head>
+<body>
+    <div class="headerStyle">Etherscan</div>
+
+    <div class="saveUpdateTokenContainer">
+        <table class="formTable">
+            <tr>
+                <td>
+                    <b>Save / Update Token</b>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <label for="name">Name</label>
+                </td>
+                <td>
+                    <input type="text" id="name" name="name" placeholder="Name" size="100" maxlength="50" />
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <label for="symbol">Symbol</label>
+                </td>
+                <td>
+                    <input type="text" id="symbol" name="symbol" placeholder="Symbol" size="100" maxlength="5" />
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <label for="contract-address">Contract Address</label>
+                </td>
+                <td>
+                    <input type="text" id="contract-address" name="contract-address" placeholder="Contract Address" size="100" maxlength="66" />
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <label for="total-supply">Total Supply</label>
+                </td>
+                <td>
+                    <input type="number" id="total-supply" name="total-supply" placeholder="Total Supply" size="100" min="1" max="20" />
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <label for="total-holders">Total Holders</label>
+                </td>
+                <td>
+                    <input type="number" id="total-holders" name="total-holders" placeholder="Total Holders" size="100" min="1" max="11" />
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <label></label>
+                </td>
+                <td>
+                    <button id="saveButton" class="button" onclick="save()">Save</button>
+                    <button class="button buttonRed" onclick="reset()">Reset</button>
+                </td>
+            </tr>
+        </table>
+        <hr>
+
+        <table id="token_table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Symbol</th>
+                    <th>Name</th>
+                    <th>Contract Address</th>
+                    <th>Total Supply</th>
+                    <th>Total Holders</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+
+    <script>loadTable();
+
+        var counter = 1;
+        var selectedRowNumber = null;
+        var _row = null;
+
+        function loadTable() {
+            $.ajax({
+                type: "POST",
+                url: "http://127.0.0.1:8080/Home/Read",
+                success: function (data) {
+                    var tokenArr = data.results;
+
+                    tokenArr.forEach(function (token) {
+                        $("#token_table tbody").append(
+                            "<tr>" +
+                            `<td>${token.Id}</td>` +
+                            `<td>${token.Symbol}</td>` +
+                            `<td>${token.Name}</td>` +
+                            `<td>${token.ContractAddress}</td>` +
+                            `<td>${token.TotalSupply}</td>` +
+                            `<td>${token.TotalHolders}</td>` +
+                            "<td>" +
+                            "<button type='button' onclick='edit(this);'>Edit</button>" +
+                            "</td>" +
+                            "</tr>"
+                        );
+                    });
+
+                    counter += tokenArr.length;
+                },
+                error: function (xhr, ajaxOptions, thrownError) {
+                    alert('Failed to enable API.');
+                }
+            });
+        }
+
+        function save() {
+            if ($("#saveButton").text() == "Save") {
+                addNewToken();
+            } else {
+                updateToken();
+            }
+        }
+
+        function addNewToken() {
+            console.log("Saving");
+
+            var symbol = $("#symbol").val();
+            var name = $("#name").val();
+            var contractaddress = $("#contract-address").val();
+            var totalsupply = $("#total-supply").val();
+            var totalholders = $("#total-holders").val();
+
+            if (name == "") {
+                alert('Please enter a name for the token.');
+                return;
+            } else if (symbol == "") {
+                alert('Please enter a symbol for the token.');
+                return;
+            } else if (contractaddress == "") {
+                alert('Please enter a contract address for the token.');
+                return;
+            } else if (totalsupply == "") {
+                alert('Please enter the total supply for the token.');
+                return;
+            } else if (totalholders == "") {
+                alert('Please enter the total holders for the token.');
+                return;
+            }
+
+            var body = {
+                symbol,
+                name,
+                contractaddress,
+                totalsupply,
+                totalholders
+            };
+
+            $.ajax({
+                type: "POST",
+                url: "http://127.0.0.1:8080/Home/Insert",
+                data: body,
+                success: function (data) {
+                    if (data.insertSuccess == true) {
+                        $("#token_table tbody").append(
+                            "<tr>" +
+                            `<td>${counter}</td>` +
+                            `<td>${symbol}</td>` +
+                            `<td>${name}</td>` +
+                            `<td>${contractaddress}</td>` +
+                            `<td>${totalsupply}</td>` +
+                            `<td>${totalholders}</td>` +
+                            "<td>" +
+                            "<button type='button' onclick='edit(this);'>Edit</button>" +
+                            "</td>" +
+                            "</tr>"
+                        );
+
+                        counter += 1;
+
+                        reset();
+                    }
+                },
+                error: function (xhr, ajaxOptions, thrownError) {
+                    alert('Failed to insert token.');
+                }
+            });
+        }
+
+        function updateToken() {
+            console.log("Updating");
+
+            var id = selectedRowNumber;
+            var symbol = $("#symbol").val();
+            var name = $("#name").val();
+            var contractaddress = $("#contract-address").val();
+            var totalsupply = $("#total-supply").val();
+            var totalholders = $("#total-holders").val();
+
+            if (name == "") {
+                alert('Please enter a name for the token.');
+                return;
+            } else if (symbol == "") {
+                alert('Please enter a symbol for the token.');
+                return;
+            } else if (contractaddress == "") {
+                alert('Please enter a contract address for the token.');
+                return;
+            } else if (totalsupply == "") {
+                alert('Please enter the total supply for the token.');
+                return;
+            } else if (totalholders == "") {
+                alert('Please enter the total holders for the token.');
+                return;
+            }
+
+            var body = {
+                id,
+                symbol,
+                name,
+                contractaddress,
+                totalsupply,
+                totalholders
+            };
+
+            $.ajax({
+                type: "POST",
+                url: "http://127.0.0.1:8080/Home/Update",
+                data: body,
+                success: function (data) {
+                    if (data.updateSuccess == true) {
+                        $(_row).after(
+                            "<tr>" +
+                            `<td>${selectedRowNumber}</td>` +
+                            `<td>${symbol}</td>` +
+                            `<td>${name}</td>` +
+                            `<td>${contractaddress}</td>` +
+                            `<td>${totalsupply}</td>` +
+                            `<td>${totalholders}</td>` +
+                            "<td>" +
+                            "<button type='button' onclick='edit(this);'>Edit</button>" +
+                            "</td>" +
+                            "</tr>"
+                        );
+
+                        $(_row).remove();
+
+                        reset();
+                    }
+                },
+                error: function (xhr, ajaxOptions, thrownError) {
+                    alert('Failed to update token.');
+                }
+            });
+        }
+
+        function reset() {
+            console.log("Resetting");
+
+            $("input").val("");
+            $("#saveButton").text("Save");
+        }
+
+        function edit(button) {
+            _row = $(button).parents("tr");
+            var cols = _row.children("td");
+            selectedRowNumber = $(cols[0]).text();
+            $("#name").val($(cols[2]).text());
+            $("#symbol").val($(cols[1]).text());
+            $("#contract-address").val($(cols[3]).text());
+            $("#total-supply").val($(cols[4]).text());
+            $("#total-holders").val($(cols[5]).text());
+
+            $("#saveButton").text("Update");
+        }</script>
+</body>
+</html>
